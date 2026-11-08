@@ -1,0 +1,5 @@
+# Build environment: Rust on Debian (older glibc than SteamOS, so the binary runs there), with the GTK 3 and
+# GStreamer headers to link against. The binary itself links to the system's GTK and GStreamer at run time.
+FROM docker.io/library/rust:1-trixie
+RUN apt-get update && apt-get install -y --no-install-recommends libgtk-3-dev libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev && rm -rf /var/lib/apt/lists/*

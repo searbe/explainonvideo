@@ -1,0 +1,150 @@
+/* The stylesheet (docs/DESIGN.md). design.css() fills in its tokens ($${name}) for the light or dark scheme. */
+* { font-family: ${font}; }
+window.eov, window.eov .page { background-color: ${bg}; color: ${text}; ${size_body} }
+window.eov headerbar { background-color: ${bg}; border: none; box-shadow: none; min-height: 40px; padding: 0 8px;
+  background-image: linear-gradient(to right, ${surface_1} 199px, ${line} 199px, ${line} 200px, transparent 200px); }
+window.eov.compact headerbar {
+  background-image: linear-gradient(to right, ${surface_1} 55px, ${line} 55px, ${line} 56px, transparent 56px); }
+window.eov headerbar .title { color: ${text}; ${size_body_strong} }
+window.eov headerbar button.titlebutton { border: none; box-shadow: none; }
+scrollbar { background: transparent; border: none; box-shadow: none; }
+scrollbar trough { background: transparent; border: none; box-shadow: none; }
+scrollbar button { min-width: 0; min-height: 0; padding: 0; margin: 0; border: none; background: none; box-shadow: none;
+  -gtk-icon-source: none; opacity: 0; }
+scrollbar slider { border: none; border-radius: ${r_full}px; background: ${line_strong}; margin: 3px;
+  transition: min-width 120ms ease-out, min-height 120ms ease-out, background-color 120ms ease-out; }
+scrollbar.vertical slider { min-width: 3px; min-height: 32px; }
+scrollbar.horizontal slider { min-height: 3px; min-width: 32px; }
+scrollbar.vertical:hover slider, scrollbar.vertical.dragging slider { min-width: 6px; background: ${text_3}; }
+scrollbar.horizontal:hover slider, scrollbar.horizontal.dragging slider { min-height: 6px; background: ${text_3}; }
+window.eov list, window.eov row { background: transparent; }
+window.eov textview, window.eov textview text { background: transparent; color: ${text}; }
+window.eov selection, window.eov text selection { background: ${accent_weak}; color: ${text}; }
+window.eov tooltip, tooltip { background: ${surface_4}; color: ${text}; border-radius: ${r_sm}px; border: 1px solid ${line}; }
+tooltip * { color: ${text}; ${size_small} }
+
+/* type */
+.headline { ${size_headline} color: ${text}; }
+.title { ${size_title} color: ${text}; }
+.body { ${size_body} color: ${text}; }
+.strong { ${size_body_strong} color: ${text}; }
+.small { ${size_small} color: ${text_2}; }
+.caption { ${size_caption} color: ${text_3}; }
+
+.faint { color: ${text_3}; }
+
+.tabular { font-feature-settings: "tnum"; }
+
+.accent-text { color: ${accent}; }
+.warning-text { color: ${warning}; }
+
+/* buttons */
+button.btn { min-height: 28px; padding: 0 12px; border-radius: ${r_sm}px; border: none; box-shadow: none;
+  background: ${surface_3}; color: ${text}; ${size_body_strong} -gtk-icon-shadow: none; outline: none;
+  transition: background-color 120ms ease-out, color 120ms ease-out, opacity 120ms ease-out; }
+button.btn:hover { background: ${surface_4}; }
+button.btn label { color: inherit; }
+button.btn.primary { background: ${accent}; color: ${on_accent}; }
+button.btn.primary:hover { background: ${accent_hover}; }
+button.btn.quiet { background: transparent; color: ${text_2}; }
+button.btn.quiet:hover { background: ${surface_3}; color: ${text}; }
+button.btn.danger { background: transparent; color: ${danger}; }
+button.btn.danger:hover { background: ${danger_weak}; }
+button.btn.small { min-height: 24px; padding: 0 8px; }
+button.btn.icon { min-width: 28px; min-height: 28px; padding: 0; background: transparent; color: ${text_2}; }
+button.btn.icon:hover { background: ${surface_3}; color: ${text}; }
+button.btn.icon.danger:hover { background: ${danger_weak}; color: ${danger}; }
+button.btn.icon.on { color: ${accent}; }
+button.btn.icon.inline { min-width: 18px; min-height: 18px; margin-right: 4px; }  /* in a line of text */
+button.btn .keyhint { ${size_caption} color: ${text_3}; margin-left: 6px; }
+button.btn.primary .keyhint { color: rgba(255,255,255,0.7); }
+
+/* a segmented control */
+.segmented { background: ${surface_3}; border-radius: ${r_sm}px; padding: 2px; }
+.segmented button.segment { min-height: 24px; padding: 0 12px; border-radius: 4px; background: transparent; border: none;
+  box-shadow: none; background-image: none; color: ${text_2}; outline: none;
+  transition: background-color 120ms ease-out, color 120ms ease-out; }
+.segmented button.segment label { color: inherit; ${size_small} font-weight: 600; }
+.segmented button.segment:hover { color: ${text}; }
+.segmented button.segment.on { background: ${raised}; color: ${text}; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+
+.group-header { ${size_caption} font-weight: 600; color: ${text_3}; margin: 16px 12px 4px 12px; }
+.hairline { background: ${line}; min-height: 1px; min-width: 1px; }
+
+/* fields */
+
+window.eov entry, .hud entry { min-height: 32px; border-radius: ${r_sm}px; background: ${surface_2}; color: ${text};
+  border: 1px solid ${line}; box-shadow: none; padding: 0 10px; caret-color: ${accent}; }
+window.eov entry:focus, .hud entry:focus { border-color: ${accent}; box-shadow: 0 0 0 3px ${accent_weak}; }
+window.eov entry image { color: ${text_3}; }
+window.eov combobox button, window.eov combobox button.combo { min-height: 28px; border-radius: ${r_sm}px;
+  background: ${surface_3}; color: ${text}; border: none; box-shadow: none; padding: 0 8px; }
+window.eov combobox button:hover { background: ${surface_4}; }
+window.eov switch { background: ${surface_4}; border: none; border-radius: ${r_full}px; min-width: 36px; min-height: 20px; }
+window.eov switch:checked { background: ${accent}; }
+window.eov switch slider { background: #ffffff; border: none; border-radius: ${r_full}px; min-width: 16px; min-height: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3); margin: 2px; }
+window.eov check { border-radius: ${r_xs}px; background: ${surface_3}; border: 1px solid ${line_strong}; color: ${on_accent}; }
+window.eov check:checked { background: ${accent}; border-color: ${accent}; }
+
+/* setting rows, pages */
+.setting { padding: 12px 0; }
+.page-header { margin: 20px 24px 8px 24px; }
+
+window.eov paned > separator { min-width: 5px; min-height: 5px; border: none; box-shadow: none; padding: 0; margin: 0;
+  -gtk-icon-source: none; background-color: ${bg}; background-size: 100% 100%;  /* (Breeze sizes it otherwise) */
+  background-image: linear-gradient(to right, transparent 2px, ${line} 2px, ${line} 3px, transparent 3px); }
+window.eov paned > separator:hover {
+  background-image: linear-gradient(to right, transparent 2px, ${line_strong} 2px, ${line_strong} 3px, transparent 3px); }
+window.eov paned.after-panel > separator {
+  background-image: linear-gradient(to right, ${surface_1} 2px, ${line} 2px, ${line} 3px, transparent 3px); }
+window.eov paned.after-panel > separator:hover {
+  background-image: linear-gradient(to right, ${surface_1} 2px, ${line_strong} 2px, ${line_strong} 3px, transparent 3px); }
+window.eov paned.before-panel > separator {
+  background-image: linear-gradient(to right, transparent 2px, ${line} 2px, ${line} 3px, ${surface_1} 3px); }
+window.eov paned.before-panel > separator:hover {
+  background-image: linear-gradient(to right, transparent 2px, ${line_strong} 2px, ${line_strong} 3px, ${surface_1} 3px); }
+.empty-state { margin: 48px 24px; }
+
+/* HUDs */
+window.hud-window, window.hud-window > * { background: transparent; }
+.hud { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
+  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 16px; margin: 16px; ${size_body} }
+
+menu, .menu { background: ${surface_1}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; padding: 6px; }
+menu menuitem { color: ${text}; padding: 6px 12px; border-radius: ${r_sm}px; min-height: 18px; ${size_body} }
+menu menuitem:hover { background: ${surface_3}; }
+menu menuitem label { color: inherit; }
+menu menuitem check, menu menuitem radio { color: ${accent}; }
+menu separator { background: ${line}; margin: 4px 6px; min-height: 1px; }
+menu arrow { color: ${text_3}; }
+
+/* Explain on video: the controls capsule */
+.capsule { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_full}px; color: ${text};
+  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 4px 6px 4px 4px; margin: 14px; }
+.capsule .grip { padding: 0 2px 0 6px; }
+.capsule button.btn.capsule-main { border-radius: ${r_full}px; padding: 0 14px 0 10px; min-height: 30px; }
+.capsule button.btn.icon { border-radius: ${r_full}px; min-width: 30px; min-height: 30px; }
+button.btn.stop { background: ${record}; color: #ffffff; }
+button.btn.stop:hover { background: shade(${record}, 1.08); }
+button.btn.stop:disabled { opacity: 0.6; }
+.capsule .timer { ${size_body_strong} color: ${text}; margin: 0 4px 0 8px; font-feature-settings: "tnum"; }
+.capsule .timer.paused { color: ${text_3}; }
+.capsule .hairline { background: ${line_strong}; }
+button.btn:disabled { opacity: 0.5; }
+
+/* the selection toolbar, the preview */
+.toolbar { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
+  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 8px 8px 8px 12px; margin: 16px; }
+.preview-card { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px;
+  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 8px; margin: 14px; }
+.preview-card .caption { margin: 0 4px; }
+
+/* the editor */
+window.eov.editor { background-color: ${bg}; }
+.editor-stage { background: #000000; }
+.transport { padding: 8px 16px; border-top: 1px solid ${line}; background: ${surface_1}; }
+.timeline-box { background: ${surface_1}; padding: 0 16px 16px 16px; }
+.export-bar { padding: 0 16px; }
+progressbar trough { background: ${surface_3}; border: none; border-radius: ${r_full}px; min-height: 4px; }
+progressbar progress { background: ${accent}; border: none; border-radius: ${r_full}px; min-height: 4px; }
