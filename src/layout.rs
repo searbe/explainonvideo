@@ -17,6 +17,13 @@ pub fn even(n: f64) -> i32 {
     ((n / 2.0).round_ties_even() as i32 * 2).max(2)
 }
 
+/// n rounded to a whole multiple of 8, at least 8: a video width. The recording goes to ffmpeg as raw I420, whose
+/// rows GStreamer pads to 4 bytes (the colour rows are half as wide) while ffmpeg reads them unpadded: any other
+/// width shears the picture.
+pub fn width8(n: f64) -> i32 {
+    ((n / 8.0).round_ties_even() as i32 * 8).max(8)
+}
+
 pub fn even_floor(n: f64) -> i32 {
     ((n as i32) / 2 * 2).max(0)
 }
@@ -31,7 +38,7 @@ pub fn output_size(choice: &str, area_w: i32, area_h: i32) -> (i32, i32) {
         _ => {
             let (w, h) = (area_w.max(MIN_SIDE) as f64, area_h.max(MIN_SIDE) as f64);
             let shrink = (MAX_W as f64 / w).min(MAX_H as f64 / h).min(1.0);
-            (even(w * shrink).max(MIN_VIDEO), even(h * shrink).max(MIN_VIDEO))
+            (width8(w * shrink).max(MIN_VIDEO), even(h * shrink).max(MIN_VIDEO))
         }
     }
 }
@@ -194,9 +201,13 @@ mod tests {
     fn output_size_area_is_even_and_capped() {
         assert_eq!(output_size("area", 1001, 601), (1000, 600));
         let (w, h) = output_size("area", 7680, 2160);
-        assert!(w <= 3840 && h <= 2160 && w % 2 == 0);
+        assert!(w <= 3840 && h <= 2160 && w % 8 == 0);
         assert_eq!(output_size("1080", 10, 10), (1920, 1080));
-        assert_eq!(output_size("area", 396, 68), (396, 128));
+        assert_eq!(output_size("area", 396, 68), (400, 128));
+        assert_eq!(output_size("area", 478, 1076), (480, 1076)); // (was sheared: rows padded to 480 / 240)
+        for w in 64..=4000 {
+            assert_eq!(output_size("area", w, 500).0 % 8, 0);
+        }
     }
 
     #[test]
