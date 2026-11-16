@@ -842,9 +842,7 @@ impl Engine {
     pub fn set_virtual_camera(&self, on: bool) {
         if on && self.vcam.borrow().is_none() {
             let desc = "queue max-size-buffers=2 leaky=downstream ! videoconvert ! video/x-raw,format=I420 \
-                        ! pipewiresink mode=provide sync=false client-name=explainonvideo \
-                        stream-properties=\"props,media.class=Video/Source,node.name=explainonvideo,\
-                        node.description=Explain\\ on\\ video,media.role=Camera\"";
+                        ! pipewiresink name=vcam mode=provide sync=false client-name=explainonvideo";
             let b = match gst::parse_bin_from_description(desc, true) {
                 Ok(b) => b,
                 Err(e) => {
@@ -853,6 +851,12 @@ impl Engine {
                     return;
                 }
             };
+            // (set here, not in the description: GStreamer 1.28's parser drops the escapes around the spaces in the
+            // name, and the whole property then fails to parse)
+            let props = gst::Structure::builder("props").field("media.class", "Video/Source")
+                .field("node.name", "explainonvideo").field("node.description", "Explain on video")
+                .field("media.role", "Camera").build();
+            b.by_name("vcam").unwrap().set_property("stream-properties", &props);
             let _ = self.pipe.add(&b);
             let pad = self.vt.request_pad_simple("src_%u").unwrap();
             let _ = pad.link(&b.static_pad("sink").unwrap());
