@@ -39,6 +39,9 @@ pub fn default(name: &str) -> Value {
         "camera_x" => json!(0.86),       // the camera's centre, as a share of the video's width and height
         "camera_y" => json!(0.80),
         "camera_size" => json!(0.24),    // its height, as a share of the video's height
+        "camera_zoom" => json!(1.0),     // how far into the camera's picture (1 = all of it that fits the shape)
+        "camera_pan_x" => json!(0.5),    // which part of the zoomed picture shows (0–1 each way; 0.5 = the middle)
+        "camera_pan_y" => json!(0.5),
         "output" => json!("area"),       // area (the size of the area first chosen), 720, 1080, 1440
         "max_zoom" => json!(2.0),        // how far a smaller area is enlarged to fill the video (1 = never)
         "hidpi" => json!(true),          // treat a scaled screen's pixels as its logical size

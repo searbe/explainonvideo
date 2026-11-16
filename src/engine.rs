@@ -60,6 +60,7 @@ impl Screen {
 enum Event {
     Frame(Vec<u8>, i32, i32, i32),
     Caps(i32, i32),
+    CameraCaps(i32, i32),
     PartEos(u64),
     Detach(gst::Element, gst::Element, gst::Pad),
 }
@@ -146,6 +147,7 @@ pub struct Engine {
     anim: RefCell<Option<glib::SourceId>>,
     camera: RefCell<Option<(gst::Element, gst::Pad)>>,
     camera_aspect: Cell<f64>,
+    camera_frame: Cell<(i32, i32)>, // the camera's own picture size, once it's known (for zooming into it)
     mic: RefCell<Option<(gst::Element, gst::Pad)>>,
     system: RefCell<Option<(gst::Element, gst::Pad)>>,
     vcam: RefCell<Option<(gst::Element, gst::Pad)>>,
@@ -280,7 +282,7 @@ impl Engine {
             area: Cell::new((0, 0, 0, 0)), crop_now: Cell::new((0, 0, 0, 0)),
             place: Cell::new((0, 0, out_w, out_h)), target: Cell::new((0, 0, out_w, out_h)),
             anim: RefCell::new(None),
-            camera: RefCell::new(None), camera_aspect: Cell::new(1.0),
+            camera: RefCell::new(None), camera_aspect: Cell::new(1.0), camera_frame: Cell::new((0, 0)),
             mic: RefCell::new(None), system: RefCell::new(None), vcam: RefCell::new(None),
             failed: RefCell::new(HashSet::new()), tx, bus_watch: RefCell::new(None),
             recorder: RefCell::new(None), finishing: RefCell::new(vec![]), next_part_id: Cell::new(0),
@@ -363,6 +365,10 @@ impl Engine {
                     let shown = self.shown_given.borrow().clone();
                     self.set_area(self.area.get(), shown, false);
                 }
+            }
+            Event::CameraCaps(w, h) => {
+                self.camera_frame.set((w, h));
+                self.apply_camera_crop();
             }
             Event::PartEos(id) => self.part_eos(id),
             Event::Detach(b, tee, pad) => {
@@ -731,7 +737,10 @@ impl Engine {
             let aspect = shape_aspect(&shape);
             let (ch, cw) = (CAMERA_PX, layout::even(CAMERA_PX as f64 * aspect));
             let flip = if settings::bool("camera_mirror") { "videoflip method=horizontal-flip !" } else { "" };
-            let desc = format!("{source} ! videoconvert ! {flip} aspectratiocrop aspect-ratio={cw}/{ch} ! videoscale \
+            // (zoom: the part of the picture shown, set by apply_camera_crop once the picture's size is known; after
+            // the flip, so panning goes the way it looks)
+            let desc = format!("{source} ! videoconvert ! {flip} videocrop name=zoom \
+                                ! aspectratiocrop aspect-ratio={cw}/{ch} ! videoscale \
                                 ! video/x-raw,width={cw},height={ch},pixel-aspect-ratio=1/1 ! videoconvert \
                                 ! video/x-raw,format=BGRA ! cairooverlay name=shape \
                                 ! queue max-size-buffers=2 leaky=downstream");
@@ -748,6 +757,21 @@ impl Engine {
                 None
             });
             self.camera_aspect.set(aspect);
+            self.camera_frame.set((0, 0));
+            let t = self.tx.clone();
+            b.by_name("zoom").unwrap().static_pad("sink").unwrap()
+                .add_probe(gst::PadProbeType::EVENT_DOWNSTREAM, move |_, info| {
+                    if let Some(gst::PadProbeData::Event(ev)) = &info.data {
+                        if let gst::EventView::Caps(c) = ev.view() {
+                            if let Some(s) = c.caps().structure(0) {
+                                if let (Ok(w), Ok(h)) = (s.get::<i32>("width"), s.get::<i32>("height")) {
+                                    let _ = t.send(Event::CameraCaps(w, h));
+                                }
+                            }
+                        }
+                    }
+                    gst::PadProbeReturn::Ok
+                });
             let _ = self.pipe.add(&b);
             let pad = self.mix.request_pad_simple("sink_%u").unwrap();
             pad.set_property("zorder", 2u32);
@@ -778,6 +802,67 @@ impl Engine {
     pub fn camera_rect(&self) -> Rect {
         layout::camera_rect(self.out_w, self.out_h, settings::f64("camera_x"), settings::f64("camera_y"),
                             settings::f64("camera_size"), self.camera_aspect.get())
+    }
+
+    /// The part of the camera's picture shown now: (left, top, width, height) in its pixels, with its full size.
+    fn camera_view(&self, zoom: f64, pan: (f64, f64)) -> Option<((f64, f64, f64, f64), (f64, f64))> {
+        let (fw, fh) = self.camera_frame.get();
+        if fw <= 0 || fh <= 0 {
+            return None;
+        }
+        let (l, r, t, b) = layout::camera_crop(fw, fh, self.camera_aspect.get(), zoom, pan);
+        Some(((l as f64, t as f64, (fw - l - r) as f64, (fh - t - b) as f64), (fw as f64, fh as f64)))
+    }
+
+    pub fn camera_pan(&self) -> (f64, f64) {
+        (settings::f64("camera_pan_x"), settings::f64("camera_pan_y"))
+    }
+
+    /// Zoom into (step > 1) or out of the camera's picture, keeping the point at anchor (0–1 across and down the
+    /// camera as shown) where it is.
+    pub fn zoom_camera(&self, step: f64, anchor: (f64, f64)) {
+        let z0 = settings::f64("camera_zoom");
+        let z1 = (z0 * step).clamp(1.0, layout::MAX_CAMERA_ZOOM);
+        settings::set("camera_zoom", ((z1 * 1000.0).round() / 1000.0).into());
+        if let (Some(((l, t, w, h), _)), Some(((_, _, w1, h1), (fw, fh)))) =
+            (self.camera_view(z0, self.camera_pan()), self.camera_view(z1, (0.5, 0.5))) {
+            let (u, v) = (l + anchor.0 * w, t + anchor.1 * h); // (the picture's point under the pointer)
+            settings::set("camera_pan_x", layout::camera_pan(u - anchor.0 * w1, w1, fw).into());
+            settings::set("camera_pan_y", layout::camera_pan(v - anchor.1 * h1, h1, fh).into());
+        }
+        self.apply_camera_crop();
+    }
+
+    /// Move the picture in the camera: from the pan at the drag's start, by moved (the pointer's movement as a share
+    /// of the camera's width and height as shown). The picture follows the pointer.
+    pub fn pan_camera(&self, start: (f64, f64), moved: (f64, f64)) {
+        let Some(((l, t, w, h), (fw, fh))) = self.camera_view(settings::f64("camera_zoom"), start) else { return };
+        settings::set("camera_pan_x", layout::camera_pan(l - moved.0 * w, w, fw).into());
+        settings::set("camera_pan_y", layout::camera_pan(t - moved.1 * h, h, fh).into());
+        self.apply_camera_crop();
+    }
+
+    /// Crop the camera's picture to the zoom and pan in the settings.
+    fn apply_camera_crop(&self) {
+        let zoom = match self.camera.borrow().as_ref() {
+            Some((b, _)) => b.downcast_ref::<gst::Bin>().and_then(|b| b.by_name("zoom")),
+            None => None,
+        };
+        let (Some(zoom), (fw, fh)) = (zoom, self.camera_frame.get()) else { return };
+        if fw <= 0 || fh <= 0 {
+            return;
+        }
+        let new = layout::camera_crop(fw, fh, self.camera_aspect.get(), settings::f64("camera_zoom"), self.camera_pan());
+        let names = ["left", "right", "top", "bottom"];
+        let n = [new.0, new.1, new.2, new.3];
+        let o: Vec<i32> = names.iter().map(|p| zoom.property::<i32>(p)).collect();
+        let mut order: Vec<usize> = (0..4).collect();
+        order.sort_by_key(|&i| n[i] - o[i]); // shrink first: the crop never outgrows the picture
+        for i in order {
+            if n[i] != o[i] {
+                zoom.set_property(names[i], n[i]);
+            }
+        }
     }
 
     // --- sound ---

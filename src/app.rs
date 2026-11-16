@@ -806,6 +806,22 @@ impl App {
         }
     }
 
+    pub fn zoom_camera(&self, step: f64, anchor: (f64, f64)) {
+        if let Some(e) = self.engine() {
+            e.zoom_camera(step, anchor);
+        }
+    }
+
+    pub fn camera_pan(&self) -> (f64, f64) {
+        self.engine().map(|e| e.camera_pan()).unwrap_or((0.5, 0.5))
+    }
+
+    pub fn pan_camera(&self, start: (f64, f64), moved: (f64, f64)) {
+        if let Some(e) = self.engine() {
+            e.pan_camera(start, moved);
+        }
+    }
+
     // --- other windows ---
     pub fn open_editor(&self, path: Option<PathBuf>) {
         let path = match path {

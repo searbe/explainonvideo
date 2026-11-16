@@ -138,6 +138,30 @@ pub fn camera_rect(out_w: i32, out_h: i32, cx: f64, cy: f64, size: f64, aspect: 
     (if x > 1.0 { even(x) } else { 0 }, if y > 1.0 { even(y) } else { 0 }, even(w), even(h))
 }
 
+/// How far into the camera's picture it can zoom.
+pub const MAX_CAMERA_ZOOM: f64 = 4.0;
+
+/// The part of a fw × fh camera picture shown in a camera of the given shape (aspect): the biggest part of that
+/// shape, made zoom times smaller, placed by pan (0–1 each way; 0.5 is the middle). As (left, right, top, bottom)
+/// to crop off.
+pub fn camera_crop(fw: i32, fh: i32, aspect: f64, zoom: f64, pan: (f64, f64)) -> (i32, i32, i32, i32) {
+    let (w, h) = (fw as f64, fh as f64);
+    let bw = w.min(h * aspect);
+    let bh = bw / aspect;
+    let z = zoom.clamp(1.0, MAX_CAMERA_ZOOM);
+    let rw = even_floor(bw / z).max(2).min(fw);
+    let rh = even_floor(bh / z).max(2).min(fh);
+    let left = even_floor((fw - rw) as f64 * pan.0.clamp(0.0, 1.0));
+    let top = even_floor((fh - rh) as f64 * pan.1.clamp(0.0, 1.0));
+    (left, fw - rw - left, top, fh - rh - top)
+}
+
+/// The pan that puts the picture's left (or top) edge at `edge`, for a shown part `shown` wide of a picture
+/// `whole` wide: camera_crop's inverse on one axis (0.5 when there's no room to move).
+pub fn camera_pan(edge: f64, shown: f64, whole: f64) -> f64 {
+    if whole - shown < 1.0 { 0.5 } else { (edge / (whole - shown)).clamp(0.0, 1.0) }
+}
+
 /// (cx, cy, size) for a camera at rect in an out_w × out_h video: camera_rect's inverse.
 pub fn camera_centre(rect: (f64, f64, f64, f64), out_w: i32, out_h: i32) -> (f64, f64, f64) {
     let (x, y, w, h) = rect;
@@ -251,6 +275,26 @@ mod tests {
         assert!(x + w <= 1920 && y + h <= 1080 && w == h);
         let (cx, cy, size) = camera_centre((800.0, 400.0, 270.0, 270.0), 1920, 1080);
         assert_eq!(camera_rect(1920, 1080, cx, cy, size, 1.0), (800, 400, 270, 270));
+    }
+
+    #[test]
+    fn camera_crop_zooms_and_pans_inside_the_picture() {
+        // a circle from a 1280×720 camera: the middle 720×720, zoomed and panned
+        assert_eq!(camera_crop(1280, 720, 1.0, 1.0, (0.5, 0.5)), (280, 280, 0, 0));
+        assert_eq!(camera_crop(1280, 720, 1.0, 1.0, (0.0, 0.5)), (0, 560, 0, 0));
+        assert_eq!(camera_crop(1280, 720, 1.0, 2.0, (0.5, 0.5)), (460, 460, 180, 180));
+        assert_eq!(camera_crop(1280, 720, 1.0, 2.0, (1.0, 0.0)), (920, 0, 0, 360));
+        assert_eq!(camera_crop(1280, 720, 1.0, 99.0, (0.5, 0.5)), (550, 550, 270, 270)); // (capped at 4×)
+        assert_eq!(camera_crop(1280, 720, 1.0, 0.1, (0.5, 0.5)), (280, 280, 0, 0)); // (never under 1×)
+        for (aspect, zoom, pan) in [(16.0 / 9.0, 1.0, (0.3, 0.9)), (0.75, 3.3, (0.0, 1.0)), (1.0, 1.7, (0.61, 0.13))] {
+            let (l, r, t, b) = camera_crop(1280, 720, aspect, zoom, pan);
+            assert!(l >= 0 && r >= 0 && t >= 0 && b >= 0 && l % 2 == 0 && t % 2 == 0);
+            assert_eq!((1280 - l - r) % 2, 0);
+            let (w, h) = ((1280 - l - r) as f64, (720 - t - b) as f64);
+            assert!((w / h / aspect - 1.0).abs() < 0.02, "{aspect} {w}x{h}");
+            assert!((camera_pan(l as f64, w, 1280.0) - pan.0).abs() < 0.01 || w > 1278.0);
+        }
+        assert_eq!(camera_pan(10.0, 720.0, 720.0), 0.5);
     }
 
     #[test]

@@ -33,8 +33,10 @@ pub fn run(out: &str) {
         (2.6, Box::new(|e| e.pause())),
         (3.2, Box::new(|e| e.resume())),
         (3.4, Box::new(|e| { crate::settings::set("camera_x", 0.2.into()); e.place_camera(); })),
-        (4.4, Box::new(|e| { e.set_camera(false); })),
-        (5.2, Box::new(|e| e.stop())),
+        (3.8, Box::new(|e| e.zoom_camera(2.5, (0.5, 0.4)))), // (into the camera's picture: same circle)
+        (4.4, Box::new(|e| e.pan_camera(e.camera_pan(), (0.4, 0.0)))), // (the picture moves right)
+        (5.0, Box::new(|e| { e.set_camera(false); })),
+        (5.6, Box::new(|e| e.stop())),
     ];
     let next = Cell::new(0usize);
     let e2 = e.clone();

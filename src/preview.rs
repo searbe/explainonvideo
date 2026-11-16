@@ -1,5 +1,6 @@
 //! The preview: a small live picture of the video being made, attached to the controls (and kept out of it). The camera can be
-//! dragged around in it, and made bigger or smaller by dragging its corner or scrolling over it, while recording.
+//! dragged around in it and made bigger or smaller by dragging its corner, while recording; scrolling over it zooms
+//! into its picture, and dragging with the middle button moves the picture inside it.
 use crate::app::app;
 use crate::design::{self as d, Icon};
 use crate::floating;
@@ -98,7 +99,7 @@ impl Preview {
 
     pub fn update_hint(&self) {
         self.hint.set_text(if app().camera_shown() {
-            "Drag the camera to move it; drag its corner or scroll to resize it."
+            "Drag the camera to move it, or its corner to resize it. Scroll on it to zoom; middle-drag to pan."
         } else {
             "Turn the camera on to place it here."
         });
@@ -127,8 +128,18 @@ impl Preview {
     }
 
     pub fn press_at(&self, x: f64, y: f64, button: u32) {
-        if let (1, Some(what), Some(r)) = (button, self.over(x, y), app().camera_rect()) {
-            *self.press.borrow_mut() = Some((x, y, what, (r.0 as f64, r.1 as f64, r.2 as f64, r.3 as f64)));
+        match (button, self.over(x, y), app().camera_rect()) {
+            (1, Some(what), Some(r)) => {
+                *self.press.borrow_mut() = Some((x, y, what, (r.0 as f64, r.1 as f64, r.2 as f64, r.3 as f64)));
+            }
+            (2, Some(_), Some(_)) => { // (pan: the pan at the start, and the camera's size here)
+                let ((px, py), (_, _, w, h)) = (app().camera_pan(), self.cam().unwrap_or((0.0, 0.0, 1.0, 1.0)));
+                *self.press.borrow_mut() = Some((x, y, "pan", (px, py, w, h)));
+                if let Some(g) = self.picture.window() {
+                    g.set_cursor(gdk::Cursor::from_name(&self.picture.display(), "grabbing").as_ref());
+                }
+            }
+            _ => {}
         }
     }
 
@@ -145,6 +156,10 @@ impl Preview {
             }
             return;
         };
+        if what == "pan" { // (x, y: the pan at the start; w, h: the camera's size in the preview)
+            app().pan_camera((x, y), ((ex - px) / w.max(1.0), (ey - py) / h.max(1.0)));
+            return;
+        }
         let (sx, sy) = self.scale();
         let (dx, dy) = ((ex - px) / sx, (ey - py) / sy);
         let rect = if what == "move" {
@@ -171,16 +186,17 @@ impl Preview {
         self.picture.queue_draw();
     }
 
+    /// Scrolling on the camera zooms into its picture, towards the pointer.
     fn scroll(&self, ev: &gdk::EventScroll) -> glib::Propagation {
-        let Some(r) = app().camera_rect() else { return glib::Propagation::Proceed };
+        let (ex, ey) = ev.position();
+        let (Some(_), Some((x, y, w, h))) = (self.over(ex, ey), self.cam()) else { return glib::Propagation::Proceed };
         let step = match ev.direction() {
-            gdk::ScrollDirection::Up => 1.08,
-            gdk::ScrollDirection::Down => 1.0 / 1.08,
-            _ => ev.scroll_deltas().filter(|(_, dy)| *dy != 0.0).map(|(_, dy)| 1.0 / (1.0 + dy * 0.06)).unwrap_or(1.0),
+            gdk::ScrollDirection::Up => 1.1,
+            gdk::ScrollDirection::Down => 1.0 / 1.1,
+            _ => ev.scroll_deltas().filter(|(_, dy)| *dy != 0.0).map(|(_, dy)| 1.0 / (1.0 + dy * 0.08)).unwrap_or(1.0),
         };
-        let (x, y, w, h) = (r.0 as f64, r.1 as f64, r.2 as f64, r.3 as f64);
-        let (nw, nh) = (w * step, h * step);
-        self.set((x + (w - nw) / 2.0, y + (h - nh) / 2.0, nw, nh));
+        let anchor = (((ex - x) / w.max(1.0)).clamp(0.0, 1.0), ((ey - y) / h.max(1.0)).clamp(0.0, 1.0));
+        app().zoom_camera(step, anchor);
         glib::Propagation::Stop
     }
 
