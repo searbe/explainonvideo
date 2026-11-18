@@ -48,8 +48,12 @@ impl Preview {
         picture.add_events(gdk::EventMask::BUTTON_PRESS_MASK | gdk::EventMask::BUTTON_RELEASE_MASK
                            | gdk::EventMask::POINTER_MOTION_MASK | gdk::EventMask::SCROLL_MASK
                            | gdk::EventMask::SMOOTH_SCROLL_MASK);
+        picture.set_halign(gtk::Align::Center); // (its own size, never stretched by a wider card: it'd distort)
         card.pack_start(&picture, false, false, 0);
         let hint = d::text("", "caption");
+        hint.set_line_wrap(true); // (within the picture's width, rather than widening the card)
+        hint.set_max_width_chars(1);
+        hint.set_xalign(0.0);
         card.pack_start(&hint, false, false, 0);
         win.add(&card);
         floating::blur_card(&win, &card);

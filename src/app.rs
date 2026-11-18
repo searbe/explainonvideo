@@ -545,6 +545,7 @@ impl App {
         e.start();
         if let Some(p) = self.preview.borrow().as_ref() {
             p.set_size(w, h);
+            p.update_hint(); // (the camera is on now, if it's wanted)
         }
         if let Some(f) = then {
             f();
