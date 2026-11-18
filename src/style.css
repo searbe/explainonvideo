@@ -119,8 +119,8 @@ menu menuitem check, menu menuitem radio { color: ${accent}; }
 menu separator { background: ${line}; margin: 4px 6px; min-height: 1px; }
 menu arrow { color: ${text_3}; }
 
-/* Explain on video: the controls capsule */
-.capsule { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_full}px; color: ${text};
+/* Explain on video: the controls capsule (its own smoky grey: it floats over anything, and must stand out) */
+.capsule { background: ${capsule}; border: 1px solid ${capsule_line}; border-radius: ${r_full}px; color: ${text};
   box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 4px 6px 4px 4px; margin: 14px; }
 .capsule .grip { padding: 0 2px 0 6px; }
 .capsule button.btn.capsule-main { border-radius: ${r_full}px; padding: 0 14px 0 10px; min-height: 30px; }

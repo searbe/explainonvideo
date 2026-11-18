@@ -15,6 +15,7 @@ const DARK: &[(&str, &str)] = &[
     ("on-accent", "#ffffff"), ("record", "#ff5a5f"), ("danger", "#ff7a7a"), ("danger-weak", "rgba(255,122,122,0.14)"),
     ("warning", "#ffb547"), ("warning-weak", "rgba(255,181,71,0.13)"),
     ("hud", "rgba(23,24,27,0.88)"), ("highlight", "rgba(255,255,255,0.06)"), ("shadow", "rgba(0,0,0,0.35)"),
+    ("capsule", "rgba(48,50,56,0.95)"), ("capsule-line", "rgba(255,255,255,0.22)"),
 ];
 const LIGHT: &[(&str, &str)] = &[
     ("bg", "#f6f6f7"), ("surface-1", "#efeff1"), ("surface-2", "#ffffff"), ("surface-3", "#e9e9ec"),
@@ -25,6 +26,7 @@ const LIGHT: &[(&str, &str)] = &[
     ("on-accent", "#ffffff"), ("record", "#e5484d"), ("danger", "#d93d42"), ("danger-weak", "rgba(217,61,66,0.10)"),
     ("warning", "#b86e00"), ("warning-weak", "rgba(184,110,0,0.14)"),
     ("hud", "rgba(250,250,251,0.90)"), ("highlight", "rgba(255,255,255,0.7)"), ("shadow", "rgba(0,0,0,0.18)"),
+    ("capsule", "rgba(226,227,231,0.96)"), ("capsule-line", "rgba(0,0,0,0.22)"),
 ];
 const FONT: &str = r#""Inter", "Noto Sans", "Cantarell", sans-serif"#;
 const TYPE: &[(&str, i32, i32)] = &[("headline", 20, 600), ("title", 15, 600), ("body", 13, 400),
