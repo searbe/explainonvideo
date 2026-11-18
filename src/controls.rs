@@ -291,7 +291,7 @@ impl Controls {
         let p = pos.as_array().and_then(|a| Some((a.first()?.as_i64()? as i32, a.get(1)?.as_i64()? as i32)));
         match p {
             Some((x, y)) if sx <= x && x <= sx + sw - 40 && sy <= y && y <= sy + sh - 20 => self.win.move_(x, y),
-            _ => self.win.move_(sx + (sw - w) / 2, sy + sh - h - 72),
+            _ => self.win.move_(sx + (sw - w) / 2, sy + sh - h - 56), // (the card 86 px up: 30 of it is shadow)
         }
     }
 }

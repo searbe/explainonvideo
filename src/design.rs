@@ -492,16 +492,22 @@ pub fn rounded_region(x: i32, y: i32, w: i32, h: i32, r: i32) -> Vec<(i32, i32, 
     rects
 }
 
+/// The card's own shape in its window (inside its margin, rounded as drawn: a capsule's ends are half circles), as
+/// rects.
+pub fn card_shape(card: &impl IsA<gtk::Widget>) -> Vec<(i32, i32, i32, i32)> {
+    let a = card.as_ref().allocation();
+    let ctx = card.as_ref().style_context();
+    let m = ctx.margin(ctx.state());
+    let (w, h) = (a.width() - (m.left + m.right) as i32, a.height() - (m.top + m.bottom) as i32);
+    let r = if ctx.has_class("capsule") { h / 2 } else { R_LG as i32 };
+    rounded_region(a.x() + m.left as i32, a.y() + m.top as i32, w, h, r.min(w / 2).min(h / 2).max(0))
+}
+
 /// Ask KWin to blur what's behind card, a translucent window's card (X11: _KDE_NET_WM_BLUR_BEHIND_REGION;
 /// ignored where there's no KWin). Only behind the card itself, rounded.
 pub fn blur_behind(win: &impl IsA<gtk::Window>, card: &impl IsA<gtk::Widget>) {
     let Some(gdk_win) = win.as_ref().window() else { return };
-    let a = card.allocation();
-    let ctx = card.style_context();
-    let m = ctx.margin(ctx.state());
-    let rects = rounded_region(a.x() + m.left as i32, a.y() + m.top as i32,
-                               a.width() - (m.left + m.right) as i32, a.height() - (m.top + m.bottom) as i32,
-                               R_LG as i32);
+    let rects = card_shape(card);
     let values: Vec<std::os::raw::c_ulong> = rects.iter()
         .flat_map(|r| [r.0, r.1, r.2, r.3].map(|v| v.max(0) as std::os::raw::c_ulong)).collect();
     gdk::property_change(&gdk_win, &gdk::Atom::intern("_KDE_NET_WM_BLUR_BEHIND_REGION"), &gdk::Atom::intern("CARDINAL"),

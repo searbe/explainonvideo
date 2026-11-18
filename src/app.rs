@@ -805,7 +805,8 @@ impl App {
         let (cw, ch) = c.win.size();
         let (pw, ph) = p.win.size();
         let (sx, sy, sw, sh) = self.screen_rect();
-        const GAP: i32 = -14; // (both have 14 px of see-through margin around their cards: the cards 14 px apart)
+        // (both have see-through margins for their shadows, 18 px above and 30 below: the cards 14 px apart)
+        const GAP: i32 = -34;
         let x = (cx + (cw - pw) / 2).min(sx + sw - pw).max(sx);
         let y = if cy - ph - GAP >= sy { cy - ph - GAP } else { (cy + ch + GAP).min(sy + sh - ph) };
         if p.win.position() != (x, y) {

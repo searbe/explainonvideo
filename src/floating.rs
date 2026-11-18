@@ -33,10 +33,21 @@ pub fn blur_card(win: &gtk::Window, card: &impl IsA<gtk::Widget>) {
     let c = card.clone().upcast::<gtk::Widget>();
     win.connect_map_event(move |w, _| {
         d::blur_behind(w, &c);
+        clicks_on_card(w, &c);
         glib::Propagation::Proceed
     });
     let c = card.clone().upcast::<gtk::Widget>();
-    win.connect_size_allocate(move |w, _| d::blur_behind(w, &c));
+    win.connect_size_allocate(move |w, _| {
+        d::blur_behind(w, &c);
+        clicks_on_card(w, &c);
+    });
+}
+
+/// Only the card takes clicks: its see-through margin (room for its shadow) lets them through to what's below.
+fn clicks_on_card(win: &gtk::Window, card: &gtk::Widget) {
+    let rects: Vec<_> = d::card_shape(card).into_iter().map(|(x, y, w, h)| (x as f64, y as f64, w as f64, h as f64))
+        .collect();
+    clickable_only(win, &rects);
 }
 
 /// Let clicks through everywhere but rects (window coordinates).

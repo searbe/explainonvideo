@@ -121,7 +121,7 @@ menu arrow { color: ${text_3}; }
 
 /* Explain on video: the controls capsule (its own smoky grey: it floats over anything, and must stand out) */
 .capsule { background: ${capsule}; border: 1px solid ${capsule_line}; border-radius: ${r_full}px; color: ${text};
-  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 4px 6px 4px 4px; margin: 14px; }
+  box-shadow: inset 0 1px ${highlight}, 0 3px 8px ${shadow}; padding: 4px 6px 4px 4px; margin: 18px 24px 30px; }
 .capsule .grip { padding: 0 2px 0 6px; }
 .capsule button.btn.capsule-main { border-radius: ${r_full}px; padding: 0 14px 0 10px; min-height: 30px; }
 .capsule button.btn.icon { border-radius: ${r_full}px; min-width: 30px; min-height: 30px; }
@@ -137,7 +137,9 @@ button.btn:disabled { opacity: 0.5; }
 .toolbar { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
   box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 8px 8px 8px 12px; margin: 16px; }
 .preview-card { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px;
-  box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 8px; margin: 14px; }
+  box-shadow: inset 0 1px ${highlight}, 0 3px 8px ${shadow}; padding: 8px; margin: 18px 24px 30px; }
+/* (the capsule and the preview float over anything: a tight shadow, and margins that hold all of it (GTK draws a
+   blur about twice as far as its size); only the cards take clicks, see floating::blur_card) */
 .preview-card .caption { margin: 0 4px; }
 
 /* the editor */
