@@ -31,6 +31,8 @@ Categories=AudioVideo;Video;Recorder;
 StartupWMClass=explainonvideo
 # (KWin lets the program stream single windows by themselves, so only the chosen windows are recorded)
 X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1
+# (the controls are glass: they look at the small area behind them, to keep their icons readable)
+X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 DESKTOP
 cat > "$APPS/explainonvideo-editor.desktop" <<DESKTOP
 [Desktop Entry]

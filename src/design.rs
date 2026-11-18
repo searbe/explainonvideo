@@ -15,7 +15,11 @@ const DARK: &[(&str, &str)] = &[
     ("on-accent", "#ffffff"), ("record", "#ff5a5f"), ("danger", "#ff7a7a"), ("danger-weak", "rgba(255,122,122,0.14)"),
     ("warning", "#ffb547"), ("warning-weak", "rgba(255,181,71,0.13)"),
     ("hud", "rgba(23,24,27,0.88)"), ("highlight", "rgba(255,255,255,0.06)"), ("shadow", "rgba(0,0,0,0.35)"),
-    ("capsule", "rgba(48,50,56,0.95)"), ("capsule-line", "rgba(255,255,255,0.22)"),
+    ("glass", "rgba(18,19,22,0.22)"), ("glass-line", "rgba(255,255,255,0.22)"), ("glass-ink", "rgba(244,245,247,0.94)"),
+    ("glass-ink-2", "rgba(244,245,247,0.68)"), ("glass-light-ink-2", "rgba(18,19,22,0.62)"),
+    ("glass-hover", "rgba(255,255,255,0.14)"), ("glass-light", "rgba(255,255,255,0.30)"),
+    ("glass-light-line", "rgba(0,0,0,0.16)"), ("glass-light-ink", "rgba(18,19,22,0.90)"),
+    ("glass-light-hover", "rgba(0,0,0,0.10)"),
 ];
 const LIGHT: &[(&str, &str)] = &[
     ("bg", "#f6f6f7"), ("surface-1", "#efeff1"), ("surface-2", "#ffffff"), ("surface-3", "#e9e9ec"),
@@ -26,7 +30,11 @@ const LIGHT: &[(&str, &str)] = &[
     ("on-accent", "#ffffff"), ("record", "#e5484d"), ("danger", "#d93d42"), ("danger-weak", "rgba(217,61,66,0.10)"),
     ("warning", "#b86e00"), ("warning-weak", "rgba(184,110,0,0.14)"),
     ("hud", "rgba(250,250,251,0.90)"), ("highlight", "rgba(255,255,255,0.7)"), ("shadow", "rgba(0,0,0,0.18)"),
-    ("capsule", "rgba(226,227,231,0.96)"), ("capsule-line", "rgba(0,0,0,0.22)"),
+    ("glass", "rgba(18,19,22,0.22)"), ("glass-line", "rgba(255,255,255,0.22)"), ("glass-ink", "rgba(244,245,247,0.94)"),
+    ("glass-ink-2", "rgba(244,245,247,0.68)"), ("glass-light-ink-2", "rgba(18,19,22,0.62)"),
+    ("glass-hover", "rgba(255,255,255,0.14)"), ("glass-light", "rgba(255,255,255,0.30)"),
+    ("glass-light-line", "rgba(0,0,0,0.16)"), ("glass-light-ink", "rgba(18,19,22,0.90)"),
+    ("glass-light-hover", "rgba(0,0,0,0.10)"),
 ];
 const FONT: &str = r#""Inter", "Noto Sans", "Cantarell", sans-serif"#;
 const TYPE: &[(&str, i32, i32)] = &[("headline", 20, 600), ("title", 15, 600), ("body", 13, 400),
@@ -495,12 +503,18 @@ pub fn rounded_region(x: i32, y: i32, w: i32, h: i32, r: i32) -> Vec<(i32, i32, 
 /// The card's own shape in its window (inside its margin, rounded as drawn: a capsule's ends are half circles), as
 /// rects.
 pub fn card_shape(card: &impl IsA<gtk::Widget>) -> Vec<(i32, i32, i32, i32)> {
+    let (x, y, w, h) = card_rect(card);
+    let r = if card.as_ref().style_context().has_class("capsule") { h / 2 } else { R_LG as i32 };
+    rounded_region(x, y, w, h, r.min(w / 2).min(h / 2).max(0))
+}
+
+/// The card's own rect in its window (inside its margin).
+pub fn card_rect(card: &impl IsA<gtk::Widget>) -> (i32, i32, i32, i32) {
     let a = card.as_ref().allocation();
     let ctx = card.as_ref().style_context();
     let m = ctx.margin(ctx.state());
-    let (w, h) = (a.width() - (m.left + m.right) as i32, a.height() - (m.top + m.bottom) as i32);
-    let r = if ctx.has_class("capsule") { h / 2 } else { R_LG as i32 };
-    rounded_region(a.x() + m.left as i32, a.y() + m.top as i32, w, h, r.min(w / 2).min(h / 2).max(0))
+    (a.x() + m.left as i32, a.y() + m.top as i32, a.width() - (m.left + m.right) as i32,
+     a.height() - (m.top + m.bottom) as i32)
 }
 
 /// Ask KWin to blur what's behind card, a translucent window's card (X11: _KDE_NET_WM_BLUR_BEHIND_REGION;
@@ -534,6 +548,7 @@ impl Hud {
         let card = classes(gtk::Box::builder().orientation(gtk::Orientation::Vertical).spacing(12)
             .width_request(width).build(), &["hud"]);
         win.add(&card);
+        crate::backdrop::follow(&win, &card, 1.0);
         win.connect_draw(|_, cr| {
             clear(cr);
             glib::Propagation::Proceed

@@ -53,6 +53,7 @@ impl Preview {
         card.pack_start(&hint, false, false, 0);
         win.add(&card);
         floating::blur_card(&win, &card);
+        crate::backdrop::follow(&win, &card, 1.0);
         win.connect_size_allocate(|_, _| { glib::idle_add_local_once(|| app().dock_preview()); });
         let p = Rc::new(Preview { win, frame: RefCell::new(None), press: RefCell::new(None), out: Cell::new((1920, 1080)),
                                   title, picture: picture.clone(), hint });

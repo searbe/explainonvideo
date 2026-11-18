@@ -172,6 +172,7 @@ impl Selector {
         }
         overlay.add_overlay(&bar);
         win.add(&overlay);
+        crate::backdrop::follow(&win, &bar, 0.55); // (over the dimmed screen, mostly: see draw)
 
         let me = s.clone();
         canvas.connect_draw(move |_, cr| {

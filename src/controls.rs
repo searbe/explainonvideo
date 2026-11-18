@@ -79,15 +79,16 @@ impl Controls {
         // the mic's icon shows its loudness as a small bar under it
         let mic_name = Rc::new(RefCell::new("mic".to_string()));
         let level = Rc::new(Cell::new(0.0));
-        let mic_area = gtk::DrawingArea::builder().width_request(16).height_request(20)
-            .valign(gtk::Align::Center).build();
+        let mic_area = gtk::DrawingArea::builder().width_request(16).height_request(24)
+            .halign(gtk::Align::Center).valign(gtk::Align::Center).build(); // (centred like the others' icons: the
+            // icon in its middle, the bar under it)
         let (n, l) = (mic_name.clone(), level.clone());
         mic_area.connect_draw(move |w, cr| {
             let ctx = w.style_context();
-            d::draw_icon(cr, &n.borrow(), 0.0, 0.0, 16.0, &ctx.color(ctx.state()));
+            d::draw_icon(cr, &n.borrow(), 0.0, 4.0, 16.0, &ctx.color(ctx.state()));
             if *n.borrow() == "mic" && l.get() > 0.02 {
                 d::set_source(cr, "accent", Some(1.0));
-                d::round_rect(cr, 1.0, 18.0, (14.0f64 * l.get()).max(2.0), 2.0, 1.0);
+                d::round_rect(cr, 1.0, 21.0, (14.0f64 * l.get()).max(2.0), 2.0, 1.0);
                 let _ = cr.fill();
             }
             glib::Propagation::Proceed
@@ -124,6 +125,7 @@ impl Controls {
             paused_at: Cell::new(None), record, stop, time, pause, discard, more: more.clone(), preview, live,
             toggles, mic_name, level, mic_area, ticking: RefCell::new(None), dragged: Cell::new(false),
         });
+        crate::backdrop::follow(&win, &card, 1.0);
         let me = Rc::downgrade(&c);
         more.connect_clicked(move |_| {
             if let Some(me) = me.upgrade() {

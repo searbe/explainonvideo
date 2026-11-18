@@ -107,8 +107,10 @@ window.eov paned.before-panel > separator:hover {
 .empty-state { margin: 48px 24px; }
 
 /* HUDs */
-window.hud-window, window.hud-window > * { background: transparent; }
-.hud { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
+/* (the window and the selector's overlay are see-through. The cards in them are glass: no fill, the desktop
+   blurred behind them by KWin (design::blur_behind)) */
+window.hud-window, window.hud-window > overlay { background: transparent; }
+.hud { background: transparent; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
   box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 16px; margin: 16px; ${size_body} }
 
 menu, .menu { background: ${surface_1}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; padding: 6px; }
@@ -119,8 +121,8 @@ menu menuitem check, menu menuitem radio { color: ${accent}; }
 menu separator { background: ${line}; margin: 4px 6px; min-height: 1px; }
 menu arrow { color: ${text_3}; }
 
-/* Explain on video: the controls capsule (its own smoky grey: it floats over anything, and must stand out) */
-.capsule { background: ${capsule}; border: 1px solid ${capsule_line}; border-radius: ${r_full}px; color: ${text};
+/* Explain on video: the controls capsule (glass: see the end) */
+.capsule { border: 1px solid ${glass_line}; border-radius: ${r_full}px;
   box-shadow: inset 0 1px ${highlight}, 0 3px 8px ${shadow}; padding: 4px 6px 4px 4px; margin: 18px 24px 30px; }
 .capsule .grip { padding: 0 2px 0 6px; }
 .capsule button.btn.capsule-main { border-radius: ${r_full}px; padding: 0 14px 0 10px; min-height: 30px; }
@@ -128,15 +130,14 @@ menu arrow { color: ${text_3}; }
 button.btn.stop { background: ${record}; color: #ffffff; }
 button.btn.stop:hover { background: shade(${record}, 1.08); }
 button.btn.stop:disabled { opacity: 0.6; }
-.capsule .timer { ${size_body_strong} color: ${text}; margin: 0 4px 0 8px; font-feature-settings: "tnum"; }
-.capsule .timer.paused { color: ${text_3}; }
-.capsule .hairline { background: ${line_strong}; }
+.capsule .timer { ${size_body_strong} margin: 0 4px 0 8px; font-feature-settings: "tnum"; }
+.capsule .timer.paused { opacity: 0.6; }
 button.btn:disabled { opacity: 0.5; }
 
 /* the selection toolbar, the preview */
-.toolbar { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
+.toolbar { background: transparent; border: 1px solid ${line_strong}; border-radius: ${r_lg}px; color: ${text};
   box-shadow: inset 0 1px ${highlight}, 0 8px 24px ${shadow}; padding: 8px 8px 8px 12px; margin: 16px; }
-.preview-card { background: ${hud}; border: 1px solid ${line_strong}; border-radius: ${r_lg}px;
+.preview-card { background: transparent; border: 1px solid ${line_strong}; border-radius: ${r_lg}px;
   box-shadow: inset 0 1px ${highlight}, 0 3px 8px ${shadow}; padding: 8px; margin: 18px 24px 30px; }
 /* (the capsule and the preview float over anything: a tight shadow, and margins that hold all of it (GTK draws a
    blur about twice as far as its size); only the cards take clicks, see floating::blur_card) */
@@ -150,3 +151,23 @@ window.eov.editor { background-color: ${bg}; }
 .export-bar { padding: 0 16px; }
 progressbar trough { background: ${surface_3}; border: none; border-radius: ${r_full}px; min-height: 4px; }
 progressbar progress { background: ${accent}; border: none; border-radius: ${r_full}px; min-height: 4px; }
+
+/* Glass: the floating cards (the controls, the preview, notices, the selection toolbar) have only a faint tint, the
+   desktop blurred behind them; it can be anything, so their ink and tint follow it (backdrop::follow): light ink on
+   a dark tint, or (.on-light) dark ink on a light tint. Last, to win over the cards' own colours. */
+.glass { background: ${glass}; border-color: ${glass_line}; color: ${glass_ink};
+  transition: background-color 200ms ease-out, border-color 200ms ease-out; }
+.glass .headline, .glass .title, .glass .body, .glass .strong, .glass .timer, .glass .timer.paused,
+.glass button.btn.icon, .glass button.btn.quiet { color: ${glass_ink}; }
+.glass .small, .glass .caption, .glass .faint { color: ${glass_ink_2}; }
+.glass button.btn.icon:hover, .glass button.btn.quiet:hover { background: ${glass_hover}; color: ${glass_ink}; }
+.glass .hairline { background: ${glass_line}; }
+.glass.on-light { background: ${glass_light}; border-color: ${glass_light_line}; color: ${glass_light_ink}; }
+.glass.on-light .headline, .glass.on-light .title, .glass.on-light .body, .glass.on-light .strong,
+.glass.on-light .timer, .glass.on-light .timer.paused, .glass.on-light button.btn.icon,
+.glass.on-light button.btn.quiet { color: ${glass_light_ink}; }
+.glass.on-light .small, .glass.on-light .caption, .glass.on-light .faint { color: ${glass_light_ink_2}; }
+.glass.on-light button.btn.icon:hover, .glass.on-light button.btn.quiet:hover { background: ${glass_light_hover};
+  color: ${glass_light_ink}; }
+.glass.on-light .hairline { background: ${glass_light_line}; }
+.glass button.btn.icon.on, .glass.on-light button.btn.icon.on { color: ${accent}; }

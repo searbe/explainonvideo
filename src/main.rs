@@ -2,6 +2,7 @@
 #[macro_use]
 mod log;
 mod app;
+mod backdrop;
 mod controls;
 mod design;
 mod devices;
