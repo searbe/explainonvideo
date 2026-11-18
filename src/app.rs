@@ -113,6 +113,7 @@ impl App {
         self.kwin.on_activate(|| app().activate());
         self.kwin.on_change(|| app().windows_changed());
         *self.controls.borrow_mut() = Some(Controls::new());
+        crate::tray::start();
         *self.frame.borrow_mut() = Some(Frame::new(self.screen_rect(), |r| app().area_dragged(r),
                                                    |r| app().area_dropped(r), || app().follow(),
                                                    || app().choose()));
@@ -714,6 +715,26 @@ impl App {
         self.state.set(state);
         self.controls().set_state(state);
         self.frame().set_state(state);
+        crate::tray::refresh();
+    }
+
+    // --- the controls (from the tray) ---
+    pub fn controls_shown(&self) -> bool {
+        self.controls.borrow().as_ref().is_some_and(|c| c.win.is_visible())
+    }
+
+    /// Hide the controls (and the preview attached to them), or bring them back.
+    pub fn toggle_controls(&self) {
+        let c = self.controls();
+        if c.win.is_visible() {
+            c.win.hide();
+            if let Some(p) = self.preview.borrow().as_ref() {
+                p.win.hide();
+            }
+        } else {
+            c.win.present();
+        }
+        crate::tray::refresh();
     }
 
     // --- the toggles ---

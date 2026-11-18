@@ -21,6 +21,7 @@ mod selector;
 mod settings;
 mod settings_window;
 mod smoke;
+mod tray;
 mod util;
 use gstreamer as gst;
 
