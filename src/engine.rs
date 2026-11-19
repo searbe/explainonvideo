@@ -926,9 +926,13 @@ impl Engine {
     /// Offer the video to other apps as a camera (a PipeWire camera: browsers, OBS, …).
     pub fn set_virtual_camera(&self, on: bool) {
         if on && self.vcam.borrow().is_none() {
-            let desc = "queue max-size-buffers=2 leaky=downstream ! videoconvert ! video/x-raw,format=I420 \
-                        ! pipewiresink name=vcam mode=provide sync=false client-name=explainonvideo";
-            let b = match gst::parse_bin_from_description(desc, true) {
+            // (YUY2: one plane. Browsers' camera code (WebRTC's) reads only a frame's first plane, so I420's three
+            // were all dropped as too short. And no bigger than 1080p: what calls expect, and less to copy)
+            let (w, h) = layout::virtual_camera_size(self.out_w, self.out_h);
+            let desc = format!("queue max-size-buffers=2 leaky=downstream ! videoscale ! videoconvert \
+                                ! video/x-raw,format=YUY2,width={w},height={h},pixel-aspect-ratio=1/1 \
+                                ! pipewiresink name=vcam mode=provide sync=false client-name=explainonvideo");
+            let b = match gst::parse_bin_from_description(&desc, true) {
                 Ok(b) => b,
                 Err(e) => {
                     self.fail(&format!("The virtual camera couldn't be started ({e})."), false,

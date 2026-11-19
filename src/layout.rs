@@ -138,6 +138,13 @@ pub fn camera_rect(out_w: i32, out_h: i32, cx: f64, cy: f64, size: f64, aspect: 
     (if x > 1.0 { even(x) } else { 0 }, if y > 1.0 { even(y) } else { 0 }, even(w), even(h))
 }
 
+/// The virtual camera's size for an out_w × out_h video: the same shape, at most 1920 × 1080 (what calls expect),
+/// even both ways (YUY2 takes pixels in pairs).
+pub fn virtual_camera_size(out_w: i32, out_h: i32) -> (i32, i32) {
+    let s = (1920.0 / out_w as f64).min(1080.0 / out_h as f64).min(1.0);
+    (even_floor(out_w as f64 * s).max(2), even_floor(out_h as f64 * s).max(2))
+}
+
 /// How far into the camera's picture it can zoom.
 pub const MAX_CAMERA_ZOOM: f64 = 4.0;
 
@@ -275,6 +282,15 @@ mod tests {
         assert!(x + w <= 1920 && y + h <= 1080 && w == h);
         let (cx, cy, size) = camera_centre((800.0, 400.0, 270.0, 270.0), 1920, 1080);
         assert_eq!(camera_rect(1920, 1080, cx, cy, size, 1.0), (800, 400, 270, 270));
+    }
+
+    #[test]
+    fn virtual_camera_is_at_most_1080p_and_keeps_its_shape() {
+        assert_eq!(virtual_camera_size(1280, 720), (1280, 720));
+        assert_eq!(virtual_camera_size(3840, 2160), (1920, 1080));
+        assert_eq!(virtual_camera_size(3440, 1440), (1920, 802)); // (ultrawide: 1920 across)
+        assert_eq!(virtual_camera_size(480, 1076), (480, 1076));
+        assert_eq!(virtual_camera_size(1000, 3000), (360, 1080)); // (tall: 1080 up)
     }
 
     #[test]
