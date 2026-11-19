@@ -304,3 +304,38 @@ pub fn windows(title: &str, out: &str) {
     });
     a.run();
 }
+
+/// The virtual camera through engine restarts, for a camera app watching it (a browser): explainonvideo --vcam-drive
+/// OUTDIR. The virtual camera goes on at 2 s; the engine restarts at 720p at 12 s and at the area's size at 20 s
+/// (as changing the output size in the settings does); it quits at 30 s. The camera should stay, the same size.
+pub fn vcam(out: &str) {
+    std::env::set_var("EOV_INSTANCE", "vcam");
+    std::fs::create_dir_all(out).unwrap();
+    let settings_file = format!("{out}/settings.json");
+    std::fs::write(&settings_file, serde_json::json!({"folder": out, "virtual_camera": false, "mic": false,
+        "system_audio": false, "camera": false, "output": "area"}).to_string()).unwrap();
+    std::env::set_var("EOV_SETTINGS", &settings_file);
+    let a = App::new(false);
+    let t0 = std::time::Instant::now();
+    let say = move |what: &str| println!("{:.1} s: {what}", t0.elapsed().as_secs_f64());
+    let steps: Vec<(u64, &'static str, Box<dyn Fn()>)> = vec![
+        (2, "virtual camera on", Box::new(|| app().toggle("virtual_camera"))),
+        (12, "engine restarted at 720p", Box::new(|| {
+            crate::settings::set("output", "720".into());
+            app().settings_changed("output");
+        })),
+        (20, "engine restarted at the area's size", Box::new(|| {
+            crate::settings::set("output", "area".into());
+            app().settings_changed("output");
+        })),
+        (30, "quit", Box::new(|| app().quit())),
+    ];
+    for (at, what, f) in steps {
+        let say = say.clone();
+        glib::timeout_add_local_once(std::time::Duration::from_secs(at), move || {
+            f();
+            say(what);
+        });
+    }
+    a.run();
+}

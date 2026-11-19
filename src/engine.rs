@@ -923,15 +923,15 @@ impl Engine {
     }
 
     // --- the virtual camera ---
-    /// Offer the video to other apps as a camera (a PipeWire camera: browsers, OBS, …).
+    /// Feed the virtual camera (the app's, see vcam.rs), or stop feeding it.
     pub fn set_virtual_camera(&self, on: bool) {
         if on && self.vcam.borrow().is_none() {
-            // (YUY2: one plane. Browsers' camera code (WebRTC's) reads only a frame's first plane, so I420's three
-            // were all dropped as too short. And no bigger than 1080p: what calls expect, and less to copy)
+            // (the feed to the virtual camera, which is the app's and outlives this engine: see vcam.rs. No bigger
+            // than the camera, 1080p at most: less to copy)
             let (w, h) = layout::virtual_camera_size(self.out_w, self.out_h);
-            let desc = format!("queue max-size-buffers=2 leaky=downstream ! videoscale ! videoconvert \
-                                ! video/x-raw,format=YUY2,width={w},height={h},pixel-aspect-ratio=1/1 \
-                                ! pipewiresink name=vcam mode=provide sync=false client-name=explainonvideo");
+            let desc = format!("queue max-size-buffers=2 leaky=downstream ! videoscale \
+                                ! video/x-raw,width={w},height={h},pixel-aspect-ratio=1/1 \
+                                ! intervideosink channel={}", crate::vcam::CHANNEL);
             let b = match gst::parse_bin_from_description(&desc, true) {
                 Ok(b) => b,
                 Err(e) => {
@@ -940,12 +940,6 @@ impl Engine {
                     return;
                 }
             };
-            // (set here, not in the description: GStreamer 1.28's parser drops the escapes around the spaces in the
-            // name, and the whole property then fails to parse)
-            let props = gst::Structure::builder("props").field("media.class", "Video/Source")
-                .field("node.name", "explainonvideo").field("node.description", "Explain on video")
-                .field("media.role", "Camera").build();
-            b.by_name("vcam").unwrap().set_property("stream-properties", &props);
             let _ = self.pipe.add(&b);
             let pad = self.vt.request_pad_simple("src_%u").unwrap();
             let _ = pad.link(&b.static_pad("sink").unwrap());

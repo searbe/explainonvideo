@@ -63,6 +63,7 @@ pub struct App {
     settings_win: RefCell<Option<gtk::Window>>,
     pub frame: RefCell<Option<Rc<Frame>>>,
     controls: RefCell<Option<Rc<Controls>>>,
+    vcam: RefCell<Option<crate::vcam::VirtualCamera>>, // (the app's, not the engine's: it outlives engine restarts)
     waiting_for_stream: RefCell<Vec<Waiting>>,
     use_portal: Cell<bool>, // (KWin wouldn't stream the screen)
     pub on_saved: RefCell<Option<Box<dyn Fn(&Path, Option<&str>)>>>, // (for tests)
@@ -75,6 +76,7 @@ impl App {
             engine: RefCell::new(None), state: Cell::new(State::Ready), choose_first,
             selector: RefCell::new(None), preview: RefCell::new(None), countdown: RefCell::new(None),
             settings_win: RefCell::new(None), frame: RefCell::new(None), controls: RefCell::new(None),
+            vcam: RefCell::new(None),
             waiting_for_stream: RefCell::new(vec![]), use_portal: Cell::new(false), on_saved: RefCell::new(None),
         });
         APP.with(|x| *x.borrow_mut() = Some(a.clone()));
@@ -141,6 +143,7 @@ impl App {
             return;
         }
         self.close_engine();
+        self.vcam.borrow_mut().take();
         let stream = self.stream.borrow_mut().take();
         if let Some(s) = stream {
             s.close();
@@ -543,6 +546,7 @@ impl App {
         self.engine_area(&e, self.rect(), false);
         *self.engine.borrow_mut() = Some(e.clone());
         e.start();
+        self.sync_virtual_camera();
         if let Some(p) = self.preview.borrow().as_ref() {
             p.set_size(w, h);
             p.update_hint(); // (the camera is on now, if it's wanted)
@@ -567,7 +571,38 @@ impl App {
         self.sync_engine(None);
     }
 
+    /// The virtual camera, as the setting says: started (once there's an engine, whose size it takes) or stopped.
+    /// It's kept through engine restarts, so calls using it carry on.
+    fn sync_virtual_camera(&self) {
+        let want = settings::bool("virtual_camera");
+        if !want {
+            self.vcam.borrow_mut().take();
+            return;
+        }
+        let Some(e) = self.engine().filter(|_| self.vcam.borrow().is_none()) else { return };
+        let (w, h) = layout::virtual_camera_size(e.out_w, e.out_h);
+        let failed = |why: String| glib::idle_add_local_once(move || {
+            let a = app();
+            a.vcam.borrow_mut().take();
+            if let Some(e) = a.engine() {
+                e.set_virtual_camera(false);
+            }
+            a.engine_error(&format!("The virtual camera stopped ({why})."), false, Some("virtual_camera"));
+        });
+        match crate::vcam::VirtualCamera::new(w, h, e.fps, move |why| { failed(why); }) {
+            Ok(v) => *self.vcam.borrow_mut() = Some(v),
+            Err(why) => {
+                e.set_virtual_camera(false);
+                self.engine_error(&format!("The virtual camera couldn't be started ({why})."), false,
+                                  Some("virtual_camera"));
+            }
+        }
+    }
+
     fn engine_error(&self, message: &str, fatal: bool, what: Option<&str>) {
+        if what == Some("virtual_camera") { // (its feed failed: the camera goes too)
+            self.vcam.borrow_mut().take();
+        }
         if let Some(w) = what {
             settings::set(w, false.into());
             self.controls().update();
@@ -753,6 +788,7 @@ impl App {
         }
         if name == "virtual_camera" {
             self.sync_engine(None);
+            self.sync_virtual_camera();
             if on {
                 notice("Virtual camera on", Some("Other apps can now pick “Explain on video” as a camera (browsers, \
                        OBS, and apps that use PipeWire cameras)."), Some(self.rect()), vec![], Some("live"), false,

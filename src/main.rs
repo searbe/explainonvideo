@@ -24,6 +24,7 @@ mod settings_window;
 mod smoke;
 mod tray;
 mod util;
+mod vcam;
 use gstreamer as gst;
 
 fn main() {
@@ -53,6 +54,7 @@ fn main() {
         Some("--ui-drive") => drive::run(&path(2)),
         Some("--window-drive") => drive::windows(&path(2), &path(3)),
         Some("--try-preview") => drive::try_preview(&path(2), args.get(3).cloned()),
+        Some("--vcam-drive") => drive::vcam(&path(2)),
         Some("--edit") => {
             let file = args.get(2).map(std::path::PathBuf::from).or_else(|| editor::choose_file(None));
             if let Some(p) = file {
