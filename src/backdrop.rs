@@ -5,7 +5,7 @@
 use crate::layout::Rect;
 use gio::prelude::*;
 use gtk::prelude::*;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use glib::ToVariant;
 use std::collections::HashMap;
@@ -45,7 +45,9 @@ pub fn follow(win: &gtk::Window, card: &impl IsA<gtk::Widget>, reaches: f64) {
 }
 
 /// Look behind rect (on the desktop) and call back on the main thread with how bright it is, 0–1 (None: no look,
-/// e.g. KWin isn't there or won't allow it; a reason is logged once).
+/// e.g. KWin isn't there or won't allow it; a reason is logged once). Nothing here waits on the main thread: KWin's
+/// answer and the picture (read from a pipe on a thread) each arrive when they arrive, and the look ends when both
+/// have, or after 3 s.
 pub fn brightness(rect: Rect, then: impl FnOnce(Option<f64>) + 'static) {
     let (x, y, w, h) = rect;
     if w <= 0 || h <= 0 {
@@ -56,31 +58,77 @@ pub fn brightness(rect: Rect, then: impl FnOnce(Option<f64>) + 'static) {
     let fds = gio::UnixFDList::new();
     let Ok(idx) = fds.append(write.as_raw_fd()) else { return then(None) };
     drop(write); // (KWin has its own copy now: when it's done writing, the pipe ends)
-    let args = (x, y, w as u32, h as u32, HashMap::<String, glib::Variant>::new(), glib::variant::Handle(idx));
-    // (the picture is read from the pipe on a thread, as KWin writes it; the answer comes back here)
-    let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
-    std::thread::spawn(move || {
+    let look = Rc::new(RefCell::new(Look { info: None, bytes: None, then: Some(Box::new(then)) }));
+    let l = look.clone();
+    crate::util::in_thread(move || {
         let mut bytes = vec![];
         let _ = read.read_to_end(&mut bytes);
-        let _ = tx.send(bytes);
+        bytes
+    }, move |bytes| {
+        l.borrow_mut().bytes = Some(bytes);
+        Look::finish(&l);
     });
+    let l = look.clone();
+    glib::timeout_add_local_once(std::time::Duration::from_secs(3), move || Look::give_up(&l));
+    let args = (x, y, w as u32, h as u32, HashMap::<String, glib::Variant>::new(), glib::variant::Handle(idx));
     conn.call_with_unix_fd_list(Some("org.kde.KWin"), "/org/kde/KWin/ScreenShot2", "org.kde.KWin.ScreenShot2",
                                 "CaptureArea", Some(&args.to_variant()), None, gio::DBusCallFlags::NONE, 2000,
                                 Some(&fds), gio::Cancellable::NONE, move |res| {
         let info = match res {
-            Ok((v, _)) => v.child_value(0).get::<HashMap<String, glib::Variant>>().unwrap_or_default(),
+            Ok((v, out_fds)) => {
+                // (the reply carries no fds, and gio 0.18 wraps that nothing as a list anyway: dropping it would
+                // unref NULL, a GLib warning each time)
+                std::mem::forget(out_fds);
+                let info = v.child_value(0).get::<HashMap<String, glib::Variant>>().unwrap_or_default();
+                let get = |k: &str| info.get(k).and_then(|v| v.get::<u32>());
+                match (get("width"), get("height"), get("stride"), get("format")) {
+                    (Some(w), Some(h), Some(stride), Some(format)) => Some((w, h, stride, format)),
+                    _ => None,
+                }
+            }
             Err(e) => {
                 warn_once(&e.to_string());
-                return then(None);
+                None
             }
         };
-        let get = |k: &str| info.get(k).and_then(|v| v.get::<u32>());
-        let (Some(w), Some(h), Some(stride), Some(format)) = (get("width"), get("height"), get("stride"), get("format"))
-        else { return then(None) };
-        // (the pixels arrive in a moment, if they haven't yet)
-        glib::idle_add_local_once(move || then(rx.recv_timeout(std::time::Duration::from_millis(500)).ok()
-            .and_then(|bytes| mean_brightness(&bytes, w as usize, h as usize, stride as usize, format))));
+        look.borrow_mut().info = Some(info);
+        Look::finish(&look);
     });
+}
+
+/// A look behind, on its way: KWin's answer (the picture's width, height, stride, format; None: no picture), and
+/// the picture.
+struct Look {
+    info: Option<Option<(u32, u32, u32, u32)>>,
+    bytes: Option<Vec<u8>>,
+    then: Option<Box<dyn FnOnce(Option<f64>)>>,
+}
+
+impl Look {
+    fn finish(look: &Rc<RefCell<Look>>) {
+        let answer = {
+            let l = look.borrow();
+            match (&l.info, &l.bytes) {
+                (Some(None), _) => Some(None),
+                (Some(Some((w, h, stride, format))), Some(bytes)) =>
+                    Some(mean_brightness(bytes, *w as usize, *h as usize, *stride as usize, *format)),
+                _ => None, // (the other half is still on its way)
+            }
+        };
+        if let Some(answer) = answer {
+            let then = look.borrow_mut().then.take();
+            if let Some(f) = then {
+                f(answer);
+            }
+        }
+    }
+
+    fn give_up(look: &Rc<RefCell<Look>>) {
+        let then = look.borrow_mut().then.take();
+        if let Some(f) = then {
+            f(None);
+        }
+    }
 }
 
 /// The mean brightness (0–1) of a QImage's pixels: 32 bits each, as RGBA bytes (QImage's RGBA8888 formats, 17–19)
